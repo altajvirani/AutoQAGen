@@ -1,0 +1,9 @@
+# Ignore files and directories in the root directory
+node_modules
+
+# Ignore files and directories in the client directory
+client/node_modules
+
+# Ignore files and directories in the server directory
+server/venv
+server/__pycache__
