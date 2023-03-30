@@ -7,3 +7,4 @@ client/node_modules
 # Ignore files and directories in the server directory
 server/venv
 server/__pycache__
+server/test.txt
