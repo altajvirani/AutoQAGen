@@ -12,6 +12,9 @@ import Button from 'react-bootstrap/Button'
 import Tab from 'react-bootstrap/Tab'
 import Tabs from 'react-bootstrap/Tabs'
 import FormSelect from 'react-bootstrap/esm/FormSelect'
+import * as XLSX from 'xlsx'
+import jsPDF from 'jspdf'
+import 'jspdf-autotable'
 import Toast from './Toast'
 import './App.css'
 
@@ -26,6 +29,7 @@ function App() {
   const [mcqQnsAns, setMcqQnsAns] = useState()
   const [boolQnsAns, setBoolQnsAns] = useState()
   const [subjQnsAns, setSubjQnsAns] = useState()
+  const [isDataReceived, setIsDataReceived] = useState(false);
   const animatedComponents = makeAnimated()
   const [toast, setToast] = useState(null)
 
@@ -59,7 +63,7 @@ function App() {
   const styles = {
     valueContainer: (provided) => ({
       ...provided,
-      flexWrap: 'nowrap',
+      flexWrap: 'nowrap'
     }),
     input: (provided) => ({
       ...provided,
@@ -73,6 +77,25 @@ function App() {
       boxShadow: state.isFocused ? '0 0 0 0.25rem rgba(0, 123, 255, 0.25)' : null,
       '&:hover': {
         borderColor: state.isFocused ? '#92c7ff' : '#C7D1DF'
+      }
+    }),
+    multiValue: (provided) => ({
+      ...provided,
+      backgroundColor: '#d6e4f6',
+      borderRadius: '0.3rem',
+      color: '#3b4859'
+    }),
+    multiValueLabel: (provided) => ({
+      ...provided,
+      color: '#3b4859'
+    }),
+    multiValueRemove: (provided, state) => ({
+      ...provided,
+      margin: '0.2rem',
+      borderRadius: '0.25rem',
+      '&:hover': {
+        color: '#3b4859',
+        backgroundColor: '#a2b4ca'
       }
     })
   }
@@ -91,62 +114,102 @@ function App() {
   }, [whQnsAns, gapQnsAns, mcqQnsAns, boolQnsAns, subjQnsAns])
 
   const handleSubmit = async () => {
-    if (inputText.current.value && noOfQns.current.value && qType.length) {
-      const response = await fetch('https://autoqa-gen-backend.onrender.com/send_doc', {
-      // const response = await fetch('/send_doc', {
+    const document = inputText.current.value
+    const noOfQnsValue = noOfQns.current.value
+    const qnType = qType
+
+    if (!document || !noOfQnsValue || !qnType.length) {
+      setToast({
+        type: 'warning',
+        title: 'Please fill in all fields.',
+        duration: '2000',
+        position: 'top center'
+      })
+      return
+    }
+
+    try {
+      setIsDataReceived(true)
+      setToast({
+        type: 'info',
+        title: 'Please wait, generating...',
+        duration: '2000',
+        position: 'top center'
+      })
+
+      const response = await fetch('/send_doc', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          document: inputText.current.value,
-          qn_type: qType,
-          no_of_qns: noOfQns.current.value
+          document,
+          qn_type: qnType,
+          no_of_qns: noOfQnsValue
         })
       })
+
       const data = await response.json()
-      console.log(data)
+
+      if (Object.values(data).every((value) => !value.length)) {
+        throw new Error('Error generating results.')
+      }
+
       setWhQnsAns(data['single_answer'] ?? '')
       setGapQnsAns(data['gap_fill'] ?? '')
       setMcqQnsAns(data['mcq'] ?? '')
       setBoolQnsAns(data['boolean'] ?? '')
       setSubjQnsAns(data['subjective'] ?? '')
-      setToast(null)
-    } else {
+
       setToast({
-        'type': 'default',
-        'title': 'Please fill in all fields.',
-        'duration': '2000',
-        'position': 'top center'
+        type: 'success',
+        title: 'Generation successful.',
+        duration: '2000',
+        position: 'top center'
       })
+
+    } catch (error) {
+      setToast({
+        type: 'error',
+        title: 'Error generating results.',
+        duration: '2000',
+        position: 'top center'
+      })
+    } finally {
+      setIsDataReceived(false)
     }
   }
 
   const capitalizeStr = str => {
     return (
       str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
-    );
-  };
+    )
+  }
 
-
-  const dwnldCSV = () => {
-    let csvContent = "data:text/csvcharset=utf-8,"
-    let header = ["Sr. No.", "Question Type", "Question"]
+  const formatBeforeDwnld = option => {
+    let header = ['Sr. No.', 'Question Type', 'Question']
+    let content = option === 'csv' ? 'data:text/csvcharset=utf-8,' : []
     let optionsCount = 0
-    if (mcqQnsAns) {
+    if (mcqQnsAns.length) {
       mcqQnsAns.map(val =>
         optionsCount = val.options.length > optionsCount ? val.options.length : optionsCount
       )
       for (let i = 1; i <= optionsCount; i++)
-        header.push("Option " + i)
+        header.push('Option ' + i)
     }
-    header.push("Answer")
-    csvContent += header.join(",") + "\n"
+    header.push('Answer')
+
+    if (option === 'csv')
+      content += header.join(',') + '\n'
+    else
+      content.push(header)
+
+    let index = 1
     const addDataRows = (qnsAns, type) => {
       if (!qnsAns) return
-      qnsAns.forEach((qa, index) => {
-        let row = [index + 1, type, qa.question]
-        if (mcqQnsAns && qa.options) {
+      qnsAns.forEach((qa, _) => {
+        let row = [index++, type, qa.question]
+        if (mcqQnsAns.length && qa.options) {
           qa.options.forEach(opt =>
             row.push(opt)
           )
@@ -154,27 +217,62 @@ function App() {
           for (let i = 0; i < optionsCount; i++)
             row.push('-')
         }
-        row.push(qa.answer)
-        csvContent += row.join(",") + "\n"
+
+        if (option === 'csv') {
+          row.push(`"${qa.answer.replace(/"/g, '""')}"`)
+          content += row.join(',') + '\n'
+        } else {
+          row.push(qa.answer)
+          content.push(row)
+        }
       })
     }
-    addDataRows(whQnsAns, "Wh-type")
-    addDataRows(gapQnsAns, "Gap-Fill")
-    addDataRows(mcqQnsAns, "MCQ")
-    addDataRows(boolQnsAns, "True/False")
-    addDataRows(subjQnsAns, "Subjective")
-    const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "qns_ans.csv")
-    document.body.appendChild(link)
-    if (whQnsAns || gapQnsAns || mcqQnsAns || boolQnsAns || subjQnsAns)
-      link.click()
-    document.body.removeChild(link)
+    addDataRows(whQnsAns, 'Wh-type')
+    addDataRows(gapQnsAns, 'Gap-Fill')
+    addDataRows(mcqQnsAns, 'MCQ')
+    addDataRows(boolQnsAns, 'True/False')
+    addDataRows(subjQnsAns, 'Subjective')
+    return content
+  }
+
+  const dwnldCSV = () => {
+    if (whQnsAns.length || gapQnsAns.length || mcqQnsAns.length || boolQnsAns.length || subjQnsAns.length) {
+      let csvContent = formatBeforeDwnld('csv')
+      const encodedUri = encodeURI(csvContent)
+      const link = document.createElement('a')
+      link.setAttribute('href', encodedUri)
+      link.setAttribute('download', 'qns_ans.csv')
+      document.body.appendChild(link)
+      if (whQnsAns || gapQnsAns || mcqQnsAns || boolQnsAns || subjQnsAns)
+        link.click()
+      document.body.removeChild(link)
+    }
   }
 
   const dwnldExcel = () => {
-    console.log('excel')
+    if (whQnsAns || gapQnsAns || mcqQnsAns || boolQnsAns || subjQnsAns) {
+      const wb = XLSX.utils.book_new()
+      const worksheetData = formatBeforeDwnld()
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData)
+      XLSX.utils.book_append_sheet(wb, ws, 'Questions & Answers')
+      XLSX.writeFile(wb, 'qns_ans.xlsx')
+    }
+  }
+
+  const dwnldPDF = () => {
+    const doc = new jsPDF()
+    const content = formatBeforeDwnld()
+
+    doc.autoTable({
+      head: [content[0]],
+      body: content.slice(1),
+      columnStyles: {
+        2: {
+          columnWidth: 40
+        }
+      }
+    })
+    doc.save('qns_ans.pdf')
   }
 
   const handleDwnld = () => {
@@ -183,7 +281,7 @@ function App() {
     if (dwnldOp.current.selectedIndex === 2)
       dwnldExcel()
     if (dwnldOp.current.selectedIndex === 3)
-      console.log('pdf')
+      dwnldPDF()
   }
 
   return (
@@ -358,7 +456,8 @@ function App() {
                 className='qa-form-button'
                 variant='primary'
                 type='button'
-                onClick={() => handleSubmit()}>Submit
+                onClick={() => handleSubmit()}
+                disabled={isDataReceived}>Submit
               </Button>
             </Form>
           </Container>

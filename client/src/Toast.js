@@ -37,11 +37,12 @@ class Toast extends Component {
                     <div className='toast-icon'>
                         <img
                             className='toast-icon-img'
-                            src={this.type === 'success' ? '/assets/check.png'
-                                : this.type === 'error' ? '/assets/error.png'
-                                    : this.type === 'warning' ? '/assets/warning.png'
-                                        : this.type === 'info' ? '/assets/info.png' : '/assets/default.png'}
-                            alt='toast-icon'
+                            src={
+                                this.type === 'success' ? '/assets/check.png'
+                                    : this.type === 'error' ? '/assets/error.png'
+                                        : this.type === 'warning' ? '/assets/warning.png'
+                                            : this.type === 'info' ? '/assets/info.png' : '/assets/default.png'
+                            } alt='toast-icon'
                             draggable='false' />
                     </div>
                     <span className='toast-title'>{
@@ -57,12 +58,12 @@ class Toast extends Component {
                         onClick={() => { this.hideToast() }}>
                         <img
                             className='clear-toast-icon'
-                            src={this.type === 'success' ? '/assets/success_cancel.png'
-                                : this.type === 'error' ? '/assets/error_cancel.png'
-                                    : this.type === 'warning' ? '/assets/warning_cancel.png'
-                                        : this.type === 'info' ? '/assets/info_cancel.png' : '/assets/default_cancel.png'
-                            }
-                            alt='clear-toast'
+                            src={
+                                this.type === 'success' ? '/assets/success_cancel.png'
+                                    : this.type === 'error' ? '/assets/error_cancel.png'
+                                        : this.type === 'warning' ? '/assets/warning_cancel.png'
+                                            : this.type === 'info' ? '/assets/info_cancel.png' : '/assets/default_cancel.png'
+                            } alt='clear-toast'
                             onClick={() => {
                                 this.hideToast()
                             }}

@@ -6,7 +6,7 @@ class GenGapQnsAns:
         self.no_of_qns = no_of_qns
 
     def get_gap_qnsans(self):
-        print("Please Wait....")
+        print('Please Wait....')
         gap_qns_ans = GapFillQAGenerator(
             self.document, self.no_of_qns).generate_test()
         return gap_qns_ans

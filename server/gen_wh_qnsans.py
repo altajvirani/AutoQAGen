@@ -8,8 +8,8 @@ class GenWhQnsAns:
         self.no_of_qns = no_of_qns
 
     def get_wh_qnsans(self):
-        print("Please Wait....")
+        print('Please Wait....')
         qa_list = QAGenerator().generate(
-            self.document, num_questions=self.no_of_qns, answer_style="multiple_choice")
+            self.document, num_questions=self.no_of_qns, answer_style='multiple_choice')
         wh_qns_ans = print_qa(qa_list, isSingle=True)
         return wh_qns_ans
