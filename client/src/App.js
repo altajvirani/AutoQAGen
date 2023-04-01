@@ -137,7 +137,8 @@ function App() {
         position: 'top center'
       })
 
-      const response = await fetch('/send_doc', {
+      // const response = await fetch('/send_doc', {
+      const response = await fetch('https://autoqa-gen-backend.onrender.com/send_doc', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "//": [
-    "https://autoqa-gen-backend.onrender.com/"
+    "http://localhost:5000"
   ],
-  "proxy": "http://localhost:5000",
+  "proxy": "https://autoqa-gen-backend.onrender.com/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
